@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shapes and Sounds</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 80vh;
+            margin: 0;
+            background-color: white;
+            overflow: hidden;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+	    width: 50vw;
+        }
+
+        td {
+            text-align: center;
+            padding: 10px;
+            border: none; /* Hide table borders */
+        }
+
+        .image {
+            cursor: pointer;
+            width: 100px;
+            user-select: none;
+            position: absolute; /* For smooth dragging */
+            transition: left 0.3s ease, top 0.3s ease; /* Smooth return transition */
+        }
+
+        .shapes-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .shape {
+            margin: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            touch-action: none; /* Prevent default touch actions */
+        }
+
+        svg {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <table>
+        <tr>
+            <td><img class="image" id="image1" src="musicnoteicon.png" alt="Music Note" data-sound="sound1" /></td>
+            <td><img class="image" id="image2" src="musicnoteicon.png" alt="Music Note" data-sound="sound2" /></td>
+            <td><img class="image" id="image3" src="musicnoteicon.png" alt="Music Note" data-sound="sound3" /></td>
+            <td><img class="image" id="image4" src="musicnoteicon.png" alt="Music Note" data-sound="sound4" /></td>
+            <td><img class="image" id="image5" src="musicnoteicon.png" alt="Music Note" data-sound="sound5" /></td>
+        </tr>
+    </table>
+
+    <div class="shapes-container">
+        <div class="shape square" id="square">
+            <svg width="150" height="150">
+                <rect width="150" height="150" fill="#4CAF50" />
+            </svg>
+        </div>
+        <div class="shape triangle" id="triangle">
+            <svg width="150" height="150">
+                <polygon points="75,0 150,150 0,150" fill="#2196F3" />
+            </svg>
+        </div>
+        <div class="shape circle" id="circle">
+            <svg width="150" height="150">
+                <circle cx="75" cy="75" r="75" fill="#FF5722" />
+            </svg>
+        </div>
+        <div class="shape rectangle" id="rectangle">
+            <svg width="225" height="150">
+                <rect width="225" height="150" fill="#FFC107" />
+            </svg>
+        </div>
+        <div class="shape hexagon" id="hexagon">
+            <svg width="150" height="150">
+                <polygon points="75,0 150,37.5 150,112.5 75,150 0,112.5 0,37.5" fill="#9C27B0" />
+            </svg>
+        </div>
+    </div>
+
+    <!-- Sound Files -->
+    <audio id="sound1" src="do.mp3"></audio>
+    <audio id="sound2" src="re.mp3"></audio>
+    <audio id="sound3" src="mi.mp3"></audio>
+    <audio id="sound4" src="fa.mp3"></audio>
+    <audio id="sound5" src="fa.mp3"></audio>
+
+    <script>
+        const shapes = document.querySelectorAll('.shape');
+        const images = document.querySelectorAll('.image');
+        let currentSoundId = '';
+        let isDragging = false;
+
+        const isTouchDevice = () => {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        };
+
+        shapes.forEach(shape => {
+            let scale = 1;
+            let rotate = 0;
+
+            shape.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    shape.dataset.initialX = touch.clientX;
+                    shape.dataset.initialY = touch.clientY;
+                    shape.dataset.initialAngle = rotate;
+                } else if (e.touches.length === 2) {
+                    const initialDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    shape.dataset.initialDistance = initialDistance;
+                    shape.dataset.scale = scale;
+                }
+            });
+
+            shape.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    const dx = touch.clientX - shape.dataset.initialX;
+                    const dy = touch.clientY - shape.dataset.initialY;
+
+                    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    rotate = angle - shape.dataset.initialAngle;
+
+                    applyTransformations(shape, scale, rotate);
+                } else if (e.touches.length === 2) {
+                    const currentDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    scale = shape.dataset.scale * (currentDistance / shape.dataset.initialDistance);
+                    applyTransformations(shape, scale, rotate);
+                }
+            });
+
+            shape.addEventListener('touchend', () => {
+                delete shape.dataset.initialX;
+                delete shape.dataset.initialY;
+                delete shape.dataset.initialAngle;
+                delete shape.dataset.initialDistance;
+                delete shape.dataset.scale;
+            });
+        });
+
+        if (isTouchDevice()) {
+            images.forEach(image => {
+                const initialPosition = {
+                    top: image.getBoundingClientRect().top + window.scrollY,
+                    left: image.getBoundingClientRect().left + window.scrollX,
+                };
+
+                image.style.position = 'absolute'; // Make the image position absolute for smooth dragging
+
+                image.addEventListener('touchstart', (e) => {
+                    currentSoundId = image.getAttribute('data-sound');
+                    isDragging = false; // Reset drag flag
+                });
+
+                image.addEventListener('touchmove', (e) => {
+                    isDragging = true; // Set drag flag when moving
+
+                    const touch = e.touches[0];
+                    image.style.transition = 'none'; // Disable transition during drag
+                    image.style.left = `${touch.clientX - image.offsetWidth / 2}px`;
+                    image.style.top = `${touch.clientY - image.offsetHeight / 2}px`;
+                });
+
+                image.addEventListener('touchend', (e) => {
+                    if (!isDragging) {
+                        const sound = document.getElementById(currentSoundId);
+                        sound.currentTime = 0; // Reset sound to start
+                        sound.play();
+                    } else {
+                        const touch = e.changedTouches[0];
+                        shapes.forEach(shape => {
+                            const rect = shape.getBoundingClientRect();
+                            if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                                touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                                handleDrop(currentSoundId, shape);
+                            }
+                        });
+                    }
+
+                    // Reset image position
+                    image.style.transition = 'left 0.3s ease, top 0.3s ease'; // Add transition for returning
+                    image.style.left = `${initialPosition.left}px`;
+                    image.style.top = `${initialPosition.top}px`;
+
+                    isDragging = false; // Reset drag flag after touchend
+                });
+            });
+        } else {
+            images.forEach(image => {
+                image.addEventListener('dragstart', (e) => {
+                    currentSoundId = image.getAttribute('data-sound');
+                });
+
+                image.addEventListener('click', () => {
+                    const sound = document.getElementById(image.getAttribute('data-sound'));
+                    sound.currentTime = 0; // Reset sound to start
+                    sound.play();
+                });
+            });
+
+            shapes.forEach(shape => {
+                shape.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    shape.style.stroke = 'none'; // Reset stroke color
+                });
+
+                shape.addEventListener('dragleave', () => {
+                    shape.style.stroke = 'none'; // Reset stroke color on leave
+                });
+
+                shape.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    handleDrop(currentSoundId, shape);
+                });
+            });
+        }
+
+        function handleDrop(soundId, shape) {
+            if (soundId) {
+                const sound = document.getElementById(soundId);
+                shape.style.stroke = 'black'; // Change stroke color to black
+                shape.style.strokeWidth = '2'; // Set stroke width to 2
+                shape.setAttribute('data-sound', soundId); // Attach sound to shape
+                
+                // Attach click event to play sound
+                shape.onclick = () => {
+                    sound.currentTime = 0; // Reset sound to start
+                    sound.play();
+                };
+            }
+        }
+
+        // Function to handle zoom and rotation
+        const applyTransformations = (shape, scale, rotate) => {
+            shape.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
+        };
+    </script>
+</body>
+</html>

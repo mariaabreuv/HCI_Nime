@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Page</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* Maintain full viewport height */
+            margin: 0;
+            background-color: #f0f0f0; /* Optional: Change background color */
+        }
+        .container {
+            width: 100%; /* Use full window width */
+            position: relative;
+        }
+        img {
+            width: 100px; /* Set the width of the image */
+            height: auto; /* Maintain aspect ratio */
+            cursor: pointer;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%); /* Center the image horizontally */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="music_manager.html">
+            <img src="welcome.png" alt="Welcome" />
+        </a>
+    </div>
+</body>
+</html>
