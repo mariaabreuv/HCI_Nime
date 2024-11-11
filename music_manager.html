@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
+
     <title>Shapes and Sounds</title>
     <style>
         body {
@@ -18,21 +22,24 @@
         table {
             border-collapse: collapse;
             margin-top: 20px;
-	    width: 50vw;
+            width: 50vw;
         }
 
         td {
             text-align: center;
             padding: 10px;
-            border: none; /* Hide table borders */
+            border: none;
+            /* Hide table borders */
         }
 
         .image {
             cursor: pointer;
             width: 100px;
             user-select: none;
-            position: absolute; /* For smooth dragging */
-            transition: left 0.3s ease, top 0.3s ease; /* Smooth return transition */
+            position: absolute;
+            /* For smooth dragging */
+            transition: left 0.3s ease, top 0.3s ease;
+            /* Smooth return transition */
         }
 
         .shapes-container {
@@ -50,7 +57,8 @@
             position: relative;
             cursor: pointer;
             transition: transform 0.2s ease;
-            touch-action: none; /* Prevent default touch actions */
+            touch-action: none;
+            /* Prevent default touch actions */
         }
 
         svg {
@@ -58,6 +66,7 @@
         }
     </style>
 </head>
+
 <body>
     <table>
         <tr>
@@ -109,87 +118,91 @@
         const images = document.querySelectorAll('.image');
         let currentSoundId = '';
         let isDragging = false;
-
-        const isTouchDevice = () => {
-            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        };
-
+    
+        const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
         shapes.forEach(shape => {
+            let sound = null;  // Define sound variable for each shape
             let scale = 1;
             let rotate = 0;
-
+    
+            // Event: Touch Start
             shape.addEventListener('touchstart', (e) => {
+                if (shape.dataset.sound) {
+                    sound = document.getElementById(shape.dataset.sound);
+                    sound.play();
+                }
+    
                 if (e.touches.length === 1) {
                     const touch = e.touches[0];
-                    shape.dataset.initialX = touch.clientX;
-                    shape.dataset.initialY = touch.clientY;
-                    shape.dataset.initialAngle = rotate;
-                } else if (e.touches.length === 2) {
-                    const initialDistance = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                    shape.dataset.initialDistance = initialDistance;
-                    shape.dataset.scale = scale;
+                    shape.dataset.startX = touch.clientX;
+                    shape.dataset.startY = touch.clientY;
                 }
             });
-
+    
+            // Event: Touch Move (Adjust Volume and Pitch)
             shape.addEventListener('touchmove', (e) => {
-                if (e.touches.length === 1) {
+                if (e.touches.length === 1 && sound) {
                     const touch = e.touches[0];
-                    const dx = touch.clientX - shape.dataset.initialX;
-                    const dy = touch.clientY - shape.dataset.initialY;
-
-                    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                    rotate = angle - shape.dataset.initialAngle;
-
-                    applyTransformations(shape, scale, rotate);
-                } else if (e.touches.length === 2) {
-                    const currentDistance = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                    scale = shape.dataset.scale * (currentDistance / shape.dataset.initialDistance);
-                    applyTransformations(shape, scale, rotate);
+                    const dx = touch.clientX - shape.dataset.startX;
+                    const dy = touch.clientY - shape.dataset.startY;
+    
+                    // Volume control
+                    if (dy < 0) {
+                        sound.volume = Math.min(sound.volume + 0.01, 1);
+                    } else if (dy > 0) {
+                        sound.volume = Math.max(sound.volume - 0.01, 0);
+                    }
+    
+                    // Pitch control
+                    if (dx > 0) {
+                        sound.playbackRate = Math.min(sound.playbackRate + 0.01, 2);
+                    } else if (dx < 0) {
+                        sound.playbackRate = Math.max(sound.playbackRate - 0.01, 0.5);
+                    }
                 }
             });
-
+    
+            // Event: Touch End (Reset Sound)
             shape.addEventListener('touchend', () => {
-                delete shape.dataset.initialX;
-                delete shape.dataset.initialY;
-                delete shape.dataset.initialAngle;
-                delete shape.dataset.initialDistance;
-                delete shape.dataset.scale;
+                if (sound) {
+                    sound.pause();
+                    sound.currentTime = 0;
+                }
+    
+                delete shape.dataset.startX;
+                delete shape.dataset.startY;
             });
         });
-
+    
+        // Handle touch and drag interactions for images
         if (isTouchDevice()) {
             images.forEach(image => {
                 const initialPosition = {
                     top: image.getBoundingClientRect().top + window.scrollY,
                     left: image.getBoundingClientRect().left + window.scrollX,
                 };
-
-                image.style.position = 'absolute'; // Make the image position absolute for smooth dragging
-
-                image.addEventListener('touchstart', (e) => {
+    
+                image.style.position = 'absolute';
+    
+                image.addEventListener('touchstart', () => {
                     currentSoundId = image.getAttribute('data-sound');
-                    isDragging = false; // Reset drag flag
+                    isDragging = false;
                 });
-
+    
                 image.addEventListener('touchmove', (e) => {
-                    isDragging = true; // Set drag flag when moving
-
+                    isDragging = true;
+    
                     const touch = e.touches[0];
-                    image.style.transition = 'none'; // Disable transition during drag
+                    image.style.transition = 'none';
                     image.style.left = `${touch.clientX - image.offsetWidth / 2}px`;
                     image.style.top = `${touch.clientY - image.offsetHeight / 2}px`;
                 });
-
+    
                 image.addEventListener('touchend', (e) => {
                     if (!isDragging) {
                         const sound = document.getElementById(currentSoundId);
-                        sound.currentTime = 0; // Reset sound to start
+                        sound.currentTime = 0;
                         sound.play();
                     } else {
                         const touch = e.changedTouches[0];
@@ -201,13 +214,12 @@
                             }
                         });
                     }
-
-                    // Reset image position
-                    image.style.transition = 'left 0.3s ease, top 0.3s ease'; // Add transition for returning
+    
+                    image.style.transition = 'left 0.3s ease, top 0.3s ease';
                     image.style.left = `${initialPosition.left}px`;
                     image.style.top = `${initialPosition.top}px`;
-
-                    isDragging = false; // Reset drag flag after touchend
+    
+                    isDragging = false;
                 });
             });
         } else {
@@ -215,50 +227,45 @@
                 image.addEventListener('dragstart', (e) => {
                     currentSoundId = image.getAttribute('data-sound');
                 });
-
+    
                 image.addEventListener('click', () => {
                     const sound = document.getElementById(image.getAttribute('data-sound'));
-                    sound.currentTime = 0; // Reset sound to start
+                    sound.currentTime = 0;
                     sound.play();
                 });
             });
-
+    
             shapes.forEach(shape => {
                 shape.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    shape.style.stroke = 'none'; // Reset stroke color
                 });
-
-                shape.addEventListener('dragleave', () => {
-                    shape.style.stroke = 'none'; // Reset stroke color on leave
-                });
-
+    
                 shape.addEventListener('drop', (e) => {
                     e.preventDefault();
                     handleDrop(currentSoundId, shape);
                 });
             });
         }
-
+    
         function handleDrop(soundId, shape) {
             if (soundId) {
                 const sound = document.getElementById(soundId);
-                shape.style.stroke = 'black'; // Change stroke color to black
-                shape.style.strokeWidth = '2'; // Set stroke width to 2
-                shape.setAttribute('data-sound', soundId); // Attach sound to shape
-                
-                // Attach click event to play sound
+                shape.style.stroke = 'black';
+                shape.style.strokeWidth = '2';
+                shape.setAttribute('data-sound', soundId);
+    
                 shape.onclick = () => {
-                    sound.currentTime = 0; // Reset sound to start
+                    sound.currentTime = 0;
                     sound.play();
                 };
             }
         }
-
-        // Function to handle zoom and rotation
+    
         const applyTransformations = (shape, scale, rotate) => {
             shape.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
         };
     </script>
+    
 </body>
+
 </html>
